@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(project VERSION 1.0 LANGUAGES CXX)
+project(RedisClone VERSION 1.0 LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 23)
@@ -25,7 +25,8 @@ endif()
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Create the executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(Server src/server.cpp)
+add_executable(Client src/client.cpp)
 
-# Optionally include headers
-target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")
+# # Optionally include headers
+# target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")

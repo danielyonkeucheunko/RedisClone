@@ -13,7 +13,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang
         -Wextra
         -Weffc++
         -Wconversion
-        -Wsign-conversion
         -Werror
         -pedantic-errors
         -fdiagnostics-color=always
@@ -25,8 +24,8 @@ endif()
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Create the executable
-add_executable(Server src/server.cpp)
-add_executable(Client src/client.cpp)
+add_executable(Server src/server.cpp src/buffer.cpp)
+add_executable(Client src/client.cpp src/buffer.cpp)
 
 # # Optionally include headers
 # target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")

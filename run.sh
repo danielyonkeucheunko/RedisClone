@@ -21,4 +21,4 @@ cmake --build "$BUILD_DIR" --verbose
 # "$BUILD_DIR/$BINARY_NAME" "$@"
 
 gnome-terminal -- bash -c "$BUILD_DIR/Server; exec bash"
-gnome-terminal -- bash -c "$BUILD_DIR/Client; exec bash"
+gnome-terminal -- bash -c "$BUILD_DIR/Client set hello world; exec bash"

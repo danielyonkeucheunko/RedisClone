@@ -47,10 +47,14 @@ static int32_t write_all(int fd, const uint8_t *buf, size_t n) {
     return 0;
 }
 
-const size_t k_max_msg = 32 << 20; // likely larger than the kernel buffer
+const size_t k_max_msg = 4096; // likely larger than the kernel buffer
 
 // the `query` function was simply splited into `send_req` and `read_res`.
-static int32_t send_req(int fd, const uint8_t *text, size_t len) {
+static int32_t send_req(int fd, const std::vector<std::string> &cmd) {
+    uint32_t len = 4;
+    for (const std::string &s : cmd) {
+        len += 4 + (uint32_t)s.size();
+    }
     if (len > k_max_msg) {
         return -1;
     }
@@ -61,8 +65,18 @@ static int32_t send_req(int fd, const uint8_t *text, size_t len) {
     }
 
     buf_append(&wbuf, (const uint8_t *)&len, 4);
-    buf_append(&wbuf, text, len);
-    return write_all(fd, wbuf.data_begin, buf_size(&wbuf));
+    uint32_t n = (uint32_t)cmd.size();
+    buf_append(&wbuf, (const uint8_t *)&n, 4);
+
+    for (const std::string &s : cmd) {
+        uint32_t p = (uint32_t)s.size();
+        buf_append(&wbuf, (const uint8_t *)&p, 4);
+        buf_append(&wbuf, (const uint8_t *)s.data(), s.size());
+    }
+
+    int result = write_all(fd, wbuf.data_begin, buf_size(&wbuf));
+    buf_free(&wbuf);
+    return result;
 }
 
 static int32_t read_res(int fd) {
@@ -87,7 +101,6 @@ static int32_t read_res(int fd) {
     memcpy(&len, rbuf.data_begin, 4); // assume little endian
     if (len > k_max_msg) {
         msg("too long");
-        std::cout << len << "\n";
         return -1;
     }
 
@@ -99,13 +112,19 @@ static int32_t read_res(int fd) {
         return err;
     }
 
-    // do something
-    printf("len:%u data:%.*s\n", len, len < 100 ? len : 100,
-           &rbuf.data_begin[4]);
+    // print the result
+    uint32_t rescode = 0;
+    if (len < 4) {
+        msg("bad response");
+        return -1;
+    }
+    memcpy(&rescode, &rbuf.data_begin[4], 4);
+    printf("server says: [%u] %.*s\n", rescode, len - 4, &rbuf.data_begin[8]);
+    buf_free(&rbuf);
     return 0;
 }
 
-int main() {
+int main(int argc, char **argv) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         die("socket()");
@@ -113,38 +132,28 @@ int main() {
 
     struct sockaddr_in addr = {};
     addr.sin_family = AF_INET;
-    addr.sin_port = ntohs(1234);
+    addr.sin_port = htons(1234);
     addr.sin_addr.s_addr = ntohl(INADDR_LOOPBACK); // 127.0.0.1
     int rv = connect(fd, (const struct sockaddr *)&addr, sizeof(addr));
     if (rv) {
         die("connect");
     }
 
-    // multiple pipelined requests
-
-    std::vector<std::string> query_list = {
-        "hello1",
-        "hello2",
-        "hello3",
-        // a large message requires multiple event loop iterations
-        std::string(k_max_msg, 'z'),
-        "hello5",
-    };
+    std::vector<std::string> cmd;
+    for (int i = 1; i < argc; ++i) {
+        cmd.push_back(argv[i]);
+    }
+    int32_t err = send_req(fd, cmd);
 
     printf("Client:\n");
 
-    for (const std::string &s : query_list) {
-        int32_t err = send_req(fd, (uint8_t *)s.data(), s.size());
-        std::cout << s.size() << "\n";
-        if (err) {
-            goto L_DONE;
-        }
+    if (err) {
+        goto L_DONE;
     }
-    for (size_t i = 0; i < query_list.size(); ++i) {
-        int32_t err = read_res(fd);
-        if (err) {
-            goto L_DONE;
-        }
+
+    err = read_res(fd);
+    if (err) {
+        goto L_DONE;
     }
 
 L_DONE:

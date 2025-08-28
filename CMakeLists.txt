@@ -24,8 +24,8 @@ endif()
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Create the executable
-add_executable(Server src/server.cpp src/buffer.cpp)
-add_executable(Client src/client.cpp src/buffer.cpp)
+add_executable(Server src/server.cpp src/buffer.cpp src/hashtable.cpp)
+add_executable(Client src/client.cpp src/buffer.cpp src/hashtable.cpp)
 
 # # Optionally include headers
 # target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include")
